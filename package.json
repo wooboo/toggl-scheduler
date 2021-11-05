@@ -10,6 +10,7 @@
     "moment": "^2.24.0",
     "qs": "^6.7.0",
     "react": "^16.8.6",
+    "swr": "^0.1.16",
     "react-available-times": "^1.2.2",
     "react-big-calendar": "^0.22.0",
     "react-confirm-alert": "^2.4.1",

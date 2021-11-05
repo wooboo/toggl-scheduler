@@ -13,6 +13,7 @@ import { confirmAlert } from "react-confirm-alert"; // Import
 import "react-confirm-alert/src/react-confirm-alert.css"; // Import css
 import cleaner from "./cleaner";
 import summaryCalculator, { findProject } from "./summaryCalculator";
+import useSWR, { trigger } from "swr";
 
 const DragAndDropCalendar = withDragAndDrop(Calendar);
 const globalizeLocalizer = momentLocalizer(moment);
@@ -21,7 +22,8 @@ const endDate = new Date();
 function Event({ title, event }) {
   return (
     <span>
-      <strong>{title}</strong><br/>
+      <strong>{title}</strong>
+      <br />
       <small>{event.project}</small>
     </span>
   );
@@ -32,13 +34,25 @@ const StyledTable = styled.table`
     text-align: right;
     vertical-align: top;
   }
-  border: 2px solid gray;
-  position: fixed;
-  bottom: 2px;
-  right: 2px;
-  background: white;
-  z-index: 9999;
 `;
+
+const Container = styled.div`
+  display: grid;
+  grid-template-columns: auto 260px;
+  grid-template-areas: "calendar totals";
+  grid-template-rows: auto;
+  height: 100vh;
+`;
+const LeftPanel = styled.div`
+  grid-area: calendar;
+  justify-self: stretch;
+`;
+const RightPanel = styled.div`
+  grid-area: totals;
+  justify-self: stretch;
+  overflow-y: auto;
+`;
+
 var getDateArray = function(start, end) {
   var arr = [],
     dt = new Date(start);
@@ -62,6 +76,7 @@ function App() {
       password: "api_token"
     }
   };
+  const data = useSWR();
   const [myEventsList, loadEvents] = useFetch(
     `https://www.toggl.com/api/v8/time_entries?${qs.stringify({
       start_date,
@@ -199,68 +214,76 @@ function App() {
     }
   };
   const rangeChanged = async dates => {
-    if(dates.start){
-      dates = getDateArray(dates.start, dates.end)
+    if (dates.start) {
+      dates = getDateArray(dates.start, dates.end);
     }
     var sum = dates.map(date => summaryCalculator(date, events, myProjects));
     setSummary(sum);
   };
   return (
-    <div className="App" style={{ height: "100vh" }}>
-      <DragAndDropCalendar
-        style={{ padding: 15 }}
-        selectable
-        resizable
-        localizer={globalizeLocalizer}
-        events={events}
-        startAccessor="start"
-        endAccessor="stop"
-        titleAccessor="description"
-        onEventResize={saveEvent}
-        onEventDrop={saveEvent}
-        onDoubleClickEvent={deleteEvent}
-        onSelectEvent={selectEvent}
-        onSelectSlot={cleanUp}
-        defaultView="week"
-        step={15}
-        timeslots={1}
-        onRangeChange={rangeChanged}
-        views={["month", "week", "day"]}
-        components={{
-          event: Event
-        }}
-      />
-      <StyledTable>
-        <tbody>
-          {summary &&
-            summary
-              .filter(s => s.budgets.length > 0)
-              .map(s => (
-                <tr key={s.date}>
-                  <td>{s.date}</td>
-                  <td>
-                    <table>
-                      <tbody>
-                        <tr>
-                          <td></td>
-                          <th>{s.hours}</th>
-                        </tr>
-                        {s.budgets.map(b => (
-                          <tr key={b.name}>
-                            <th>{b.name}</th>
-                            <td>
-                              {b.hoursInText}
-                            </td>
+    <Container>
+      <LeftPanel>
+        <DragAndDropCalendar
+          style={{ padding: 15, height: "100vh" }}
+          selectable
+          resizable
+          localizer={globalizeLocalizer}
+          events={events}
+          startAccessor="start"
+          endAccessor="stop"
+          titleAccessor="description"
+          onEventResize={saveEvent}
+          onEventDrop={saveEvent}
+          onDoubleClickEvent={deleteEvent}
+          onSelectEvent={selectEvent}
+          onSelectSlot={cleanUp}
+          defaultView="week"
+          step={30}
+          timeslots={2}
+          onRangeChange={rangeChanged}
+          views={["month", "week"]}
+          components={{
+            event: Event
+          }}
+        />
+      </LeftPanel>
+      <RightPanel>
+        <StyledTable>
+          <tbody>
+            {summary &&
+              summary
+                .filter(s => s.budgets.length > 0)
+                .map(s => (
+                  <tr key={s.date}>
+                    <td>{s.date}</td>
+                    <td>
+                      <table>
+                        <tbody>
+                          <tr>
+                            <td></td>
+                            <th>{s.hours}</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </td>
-                </tr>
-              ))}
-        </tbody>
-      </StyledTable>
-    </div>
+                          {s.budgets.map(b => (
+                            <tr key={b.name}>
+                              <th>{b.name}</th>
+                              <td>{b.hoursInText}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                ))}
+            {summary && (
+              <tr>
+                <td>Sum</td>
+                <th>{summary.reduce((a, b) => a + parseFloat(b.hours), 0)}</th>
+              </tr>
+            )}
+          </tbody>
+        </StyledTable>
+      </RightPanel>
+    </Container>
   );
 }
 

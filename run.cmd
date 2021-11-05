@@ -1,1 +1,1 @@
-set "REACT_APP_TOGGL_API_KEY=togglekey" && npm start
+set "REACT_APP_TOGGL_API_KEY=06e9e484f3648a681b8d736ab28b93dd" && npm start
